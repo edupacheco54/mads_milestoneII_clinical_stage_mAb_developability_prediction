@@ -10,6 +10,8 @@ debugpy==1.8.16
     # via ipykernel
 decorator==5.2.1
     # via ipython
+et-xmlfile==2.0.0
+    # via openpyxl
 executing==2.2.1
     # via stack-data
 ipykernel==6.30.1
@@ -39,6 +41,8 @@ numpy==2.3.3
     #   pandas
     #   scikit-learn
     #   scipy
+openpyxl==3.1.5
+    # via siads696-milestoneii (pyproject.toml)
 packaging==25.0
     # via ipykernel
 pandas==2.3.2
