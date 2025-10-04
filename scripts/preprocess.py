@@ -144,7 +144,7 @@ def build_model_ready_from_merged(
         "X": X,
         "X_pca_input": X.copy(),
         "y": y,
-        "feautre_columns": feature_columns,
+        "feature_columns": feature_columns,
         "supervised_df": df,
         "imputer": imputer,
         "scaler": scaler,
