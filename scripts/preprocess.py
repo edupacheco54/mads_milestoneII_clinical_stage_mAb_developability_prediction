@@ -109,6 +109,7 @@ def engineer_sequence_features(df, seq_cols=("VH", "VL")):
     feat_df = pd.DataFrame(rows, index=df.index)
     return feat_df
 
+
 def embed_sequence_esm2(seq, model, alphabet, device="cpu"):
     if not isinstance(seq, str) or len(seq.strip()) == 0:
         return np.zeros(model.embed_dim, dtype=np.float32)
@@ -125,6 +126,7 @@ def embed_sequence_esm2(seq, model, alphabet, device="cpu"):
 
     embedding = token_representations[0, 1:-1].mean(0).cpu().numpy().astype(np.float32)
     return embedding
+
 
 def load_esm2_model(model_name="esm2_t6_8M_UR50D", device=None):
     if device is None:
@@ -143,7 +145,7 @@ def build_model_ready_from_merged(
     include_assays=False,
     impute_strategy="median",
     include_esm=True,
-    esm_model_name="esm2_t6_8M_UR50D"
+    esm_model_name="esm2_t6_8M_UR50D",
 ):
     if target_col in merged_df.columns:
         df = merged_df.dropna(subset=[target_col]).copy()
@@ -196,5 +198,5 @@ def build_model_ready_from_merged(
         "feature_columns": feature_columns,
         "supervised_df": df,
         "imputer": imputer,
-        "scaler": scaler
+        "scaler": scaler,
     }
