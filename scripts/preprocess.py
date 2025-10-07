@@ -1,5 +1,7 @@
 import pandas as pd
 import numpy as np
+import esm
+import torch
 
 from sklearn.impute import SimpleImputer
 from sklearn.preprocessing import StandardScaler
@@ -107,6 +109,32 @@ def engineer_sequence_features(df, seq_cols=("VH", "VL")):
     feat_df = pd.DataFrame(rows, index=df.index)
     return feat_df
 
+def embed_sequence_esm2(seq, model, alphabet, device="cpu"):
+    if not isinstance(seq, str) or len(seq.strip()) == 0:
+        return np.zeros(model.embed_dim, dtype=np.float32)
+
+    batch_converter = alphabet.get_batch_converter()
+    data = [("seq1", seq)]
+    batch_labels, batch_strs, batch_tokens = batch_converter(data)
+    batch_tokens = batch_tokens.to(device)
+
+    with torch.no_grad():
+        layer = model.num_layers
+        results = model(batch_tokens, repr_layers=[layer], return_contacts=False)
+        token_representations = results["representations"][layer]
+
+    embedding = token_representations[0, 1:-1].mean(0).cpu().numpy().astype(np.float32)
+    return embedding
+
+def load_esm2_model(model_name="esm2_t6_8M_UR50D", device=None):
+    if device is None:
+        device = "mps" if torch.backends.mps.is_available() else "cpu"
+
+    model, alphabet = esm.pretrained.load_model_and_alphabet(model_name)
+    model = model.eval().to(device)
+    print(f"Loaded {model_name} on device: {device.upper()}")
+    return model, alphabet, device
+
 
 def build_model_ready_from_merged(
     merged_df,
@@ -114,12 +142,15 @@ def build_model_ready_from_merged(
     seq_cols=("VH", "VL"),
     include_assays=False,
     impute_strategy="median",
+    include_esm=True,
+    esm_model_name="esm2_t6_8M_UR50D"
 ):
     if target_col in merged_df.columns:
         df = merged_df.dropna(subset=[target_col]).copy()
     else:
         df = merged_df.copy()
 
+    # Classic engineered features
     seq_feats = engineer_sequence_features(df, seq_cols=seq_cols)
 
     if include_assays:
@@ -140,12 +171,30 @@ def build_model_ready_from_merged(
     X_scaled = scaler.fit_transform(X_imputed)
     X = pd.DataFrame(X_scaled, index=df.index, columns=feature_columns)
 
+    # ESM-2 embeddings integration
+    esm_X, esm_y = None, None
+    if include_esm:
+        print("🔷 Loading ESM-2 Model...")
+        model, alphabet, device = load_esm2_model(esm_model_name)
+
+        esm_embeddings = []
+        for _, row in df.iterrows():
+            vh_seq, vl_seq = row.get("VH", ""), row.get("VL", "")
+            vh_emb = embed_sequence_esm2(vh_seq, model, alphabet, device)
+            vl_emb = embed_sequence_esm2(vl_seq, model, alphabet, device)
+            combined_emb = np.concatenate([vh_emb, vl_emb])
+            esm_embeddings.append(combined_emb)
+
+        esm_X = np.vstack(esm_embeddings)
+        esm_y = y.copy() if y is not None else None
+
     return {
         "X": X,
-        "X_pca_input": X.copy(),
         "y": y,
+        "esm_X": esm_X,
+        "esm_y": esm_y,
         "feature_columns": feature_columns,
         "supervised_df": df,
         "imputer": imputer,
-        "scaler": scaler,
+        "scaler": scaler
     }
