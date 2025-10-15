@@ -1,3 +1,18 @@
+"""
+supervised_learning.py
+
+Core utilities for training, evaluating, and interpreting supervised learning models
+in the mAb developability project.
+
+This module provides:
+    • Functions to train and cross-validate multiple regression models (RF, GB, MLP, SVR)
+    • Visualization tools for predictions, residuals, and learning curves
+    • Model interpretability via feature importance and ablation analysis
+    • Sensitivity analyses for hyperparameters and dataset size
+
+Author: Mengyao Li
+"""
+
 import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
