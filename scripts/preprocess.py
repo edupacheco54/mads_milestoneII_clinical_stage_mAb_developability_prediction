@@ -1,3 +1,17 @@
+"""
+preprocess.py
+
+Data preprocessing and feature engineering utilities for mAb developability prediction.
+
+This module includes:
+    • Data merging and cleaning functions
+    • Classical amino acid-based sequence feature extraction
+    • Integration of transformer-based ESM-2 embeddings
+    • Construction of model-ready feature matrices for supervised learning
+
+Author: Eduardo Pacheco
+"""
+
 import pandas as pd
 import numpy as np
 import esm
@@ -7,17 +21,37 @@ from sklearn.impute import SimpleImputer
 from sklearn.preprocessing import StandardScaler
 
 
+# ---------------------------------------------------------------------------
+# 1. Data merging
+# ---------------------------------------------------------------------------
 def create_clean_df(list_of_dfs):
+    """
+    Merge multiple DataFrames on the 'Name' column and remove empty columns.
+
+    Parameters
+    ----------
+    list_of_dfs : list of pandas.DataFrame
+        List of dataframes to merge.
+
+    Returns
+    -------
+    pandas.DataFrame
+        Cleaned and merged dataframe containing all relevant features.
+    """
     merged_df = list_of_dfs[0]
     for i in range(1, len(list_of_dfs)):
         merged_df = pd.merge(merged_df, list_of_dfs[i], on="Name", how="inner")
 
+    # Drop columns that are entirely NaN
     merged_df = merged_df.dropna(axis=1, how="all")
 
     return merged_df
 
 
-# Kyte-Doolitle (GRAVY) table
+# ---------------------------------------------------------------------------
+# 2. Classical biochemical feature extraction
+# ---------------------------------------------------------------------------
+# Kyte–Doolittle hydropathy (GRAVY) index
 KD = {
     "A": 1.8,
     "R": -4.5,
@@ -41,6 +75,7 @@ KD = {
     "V": 4.2,
 }
 
+# Amino acid property groups
 HYDROPHOBIC = set("AILMVFWYV")
 AROMATIC = set("FWY")
 POSITIVE = set("KRH")
@@ -49,6 +84,20 @@ POLAR = set("STNQ")
 
 
 def aa_counts(seq):
+    """
+    Count the occurrence of each amino acid in a sequence.
+
+    Parameters
+    ----------
+    seq : str
+        Amino acid sequence.
+
+    Returns
+    -------
+    dict
+        Dictionary mapping each amino acid to its count in the sequence.
+    """
+
     counts = {aa: 0 for aa in KD.keys()}
     if isinstance(seq, str):
         for ch in seq.upper():
@@ -59,10 +108,31 @@ def aa_counts(seq):
 
 
 def seq_features(seq, prefix):
+    """
+    Compute classical biophysical sequence features from an amino acid string.
+
+    Parameters
+    ----------
+    seq : str
+        Protein sequence.
+    prefix : str
+        Prefix label for feature naming (e.g., "VH" or "VL").
+
+    Returns
+    -------
+    dict
+        Dictionary of calculated sequence features including:
+        - sequence length
+        - fractions of hydrophobic, aromatic, positive, negative, and polar residues
+        - Kyte–Doolittle GRAVY score
+        - normalized amino acid composition (20-dimensional)
+    """
+
     counts = aa_counts(seq)
     L = sum(counts.values())
     feats = {f"{prefix}_len": float(L)}
 
+    # Handle missing or empty sequences
     if L == 0:
         for k in [
             "hydrophobic_frac",
@@ -78,6 +148,7 @@ def seq_features(seq, prefix):
 
         return feats
 
+    # Compute residue fractions and GRAVY index
     feats[f"{prefix}_hydrophobic_frac"] = (
         sum(counts[a] for a in HYDROPHOBIC if a in counts) / L
     )
@@ -93,6 +164,7 @@ def seq_features(seq, prefix):
     feats[f"{prefix}_polar_frac"] = sum(counts[a] for a in POLAR if a in counts) / L
     feats[f"{prefix}_kd_gravy"] = sum(KD[a] * counts[a] for a in KD.keys()) / L
 
+    # Amino acid composition (normalized)
     for aa in KD.keys():
         feats[f"{prefix}_comp_{aa}"] = counts[aa] / L
 
@@ -100,6 +172,22 @@ def seq_features(seq, prefix):
 
 
 def engineer_sequence_features(df, seq_cols=("VH", "VL")):
+    """
+    Apply classical feature extraction to VH and VL sequences.
+
+    Parameters
+    ----------
+    df : pandas.DataFrame
+        Input dataframe containing VH and VL sequence columns.
+    seq_cols : tuple of str, optional
+        Column names for the sequences to process.
+
+    Returns
+    -------
+    pandas.DataFrame
+        DataFrame containing engineered sequence features for each antibody.
+    """
+
     rows = []
     for _, row in df.iterrows():
         feats = {}
@@ -110,7 +198,29 @@ def engineer_sequence_features(df, seq_cols=("VH", "VL")):
     return feat_df
 
 
+# ---------------------------------------------------------------------------
+# 3. ESM-2 Embeddings Integration
+# ---------------------------------------------------------------------------
 def embed_sequence_esm2(seq, model, alphabet, device="cpu"):
+    """
+    Generate ESM-2 embeddings for a given protein sequence.
+
+    Parameters
+    ----------
+    seq : str
+        Protein sequence.
+    model : torch.nn.Module
+        Pretrained ESM-2 model.
+    alphabet : esm.data.Alphabet
+        Alphabet object used for tokenization.
+    device : str, optional
+        Device for inference ('cpu', 'cuda', or 'mps').
+
+    Returns
+    -------
+    numpy.ndarray
+        Mean pooled embedding vector for the input sequence.
+    """
     if not isinstance(seq, str) or len(seq.strip()) == 0:
         return np.zeros(model.embed_dim, dtype=np.float32)
 
@@ -129,6 +239,22 @@ def embed_sequence_esm2(seq, model, alphabet, device="cpu"):
 
 
 def load_esm2_model(model_name="esm2_t6_8M_UR50D", device=None):
+    """
+    Load a pretrained ESM-2 model and alphabet.
+
+    Parameters
+    ----------
+    model_name : str, optional
+        Name of the pretrained ESM-2 model to load.
+    device : str, optional
+        Device for model inference (defaults to MPS if available).
+
+    Returns
+    -------
+    tuple
+        (model, alphabet, device)
+    """
+
     if device is None:
         device = "mps" if torch.backends.mps.is_available() else "cpu"
 
@@ -136,6 +262,11 @@ def load_esm2_model(model_name="esm2_t6_8M_UR50D", device=None):
     model = model.eval().to(device)
     print(f"Loaded {model_name} on device: {device.upper()}")
     return model, alphabet, device
+
+
+# ---------------------------------------------------------------------------
+# 4. Model-Ready Data Construction
+# ---------------------------------------------------------------------------
 
 
 def build_model_ready_from_merged(
@@ -147,14 +278,50 @@ def build_model_ready_from_merged(
     include_esm=True,
     esm_model_name="esm2_t6_8M_UR50D",
 ):
+    """
+    Construct model-ready datasets for supervised learning experiments.
+
+    Parameters
+    ----------
+    merged_df : pandas.DataFrame
+        Merged dataset containing sequence and assay information.
+    target_col : str, optional
+        Name of the target variable for regression.
+    seq_cols : tuple of str, optional
+        Names of the columns containing sequence data.
+    include_assays : bool, optional
+        Whether to include numeric assay features in the model input.
+    impute_strategy : str, optional
+        Strategy for imputing missing numeric values ('mean', 'median', etc.).
+    include_esm : bool, optional
+        Whether to compute ESM-2 embeddings and include them as features.
+    esm_model_name : str, optional
+        Name of the pretrained ESM-2 model to load.
+
+    Returns
+    -------
+    dict
+        A dictionary containing:
+            • X: Scaled classical features (pandas.DataFrame)
+            • y: Target variable (numpy.ndarray)
+            • esm_X: ESM-2 embeddings (numpy.ndarray or None)
+            • esm_y: Target variable aligned with embeddings
+            • feature_columns: List of feature names
+            • supervised_df: Cleaned DataFrame used for modeling
+            • imputer: Fitted SimpleImputer
+            • scaler: Fitted StandardScaler
+    """
+
+    # Drop rows with missing target values
     if target_col in merged_df.columns:
         df = merged_df.dropna(subset=[target_col]).copy()
     else:
         df = merged_df.copy()
 
-    # Classic engineered features
+    # --- Classical sequence features ---
     seq_feats = engineer_sequence_features(df, seq_cols=seq_cols)
 
+    # Include assay data if requested
     if include_assays:
         num_cols = df.select_dtypes(include=[np.number]).columns.tolist()
         if target_col in num_cols:
@@ -163,17 +330,19 @@ def build_model_ready_from_merged(
     else:
         assay_feats = pd.DataFrame(index=df.index)
 
+    # Combine all features
     X_raw = pd.concat([seq_feats, assay_feats], axis=1)
     feature_columns = X_raw.columns.tolist()
     y = df[target_col].values if target_col in df.columns else None
 
+    # Imputation and scaling
     imputer = SimpleImputer(strategy=impute_strategy)
     scaler = StandardScaler()
     X_imputed = imputer.fit_transform(X_raw)
     X_scaled = scaler.fit_transform(X_imputed)
     X = pd.DataFrame(X_scaled, index=df.index, columns=feature_columns)
 
-    # ESM-2 embeddings integration
+    # --- ESM-2 embeddings integration ---
     esm_X, esm_y = None, None
     if include_esm:
         print("🔷 Loading ESM-2 Model...")
