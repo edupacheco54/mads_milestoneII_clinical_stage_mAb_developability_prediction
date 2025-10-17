@@ -40,16 +40,18 @@ The analysis is structured into three major components, integrated within a unif
 ---
 
 ## 📂 Repository Structure
-.
+```text
+📦 mads_milestoneII_clinical_stage_mAb_developability_prediction/
 ├── scripts/
-│   ├── load.py                     # File scanning and Excel import utilities
-│   ├── preprocess.py               # Data cleaning and model-ready dataset construction
-│   ├── supervised_learning.py      # Regression models for stability prediction
-│   └── unsupervised_learning.py    # Clustering and dimensionality reduction analysis
-├── data/                           # Raw input data (Excel files)
-├── results/                        # Generated results (plots, CSVs)
-├── main.py                         # Central execution script
+│   ├── load.py
+│   ├── preprocess.py
+│   ├── supervised_learning.py
+│   └── unsupervised_learning.py
+├── data/
+├── results/
+├── main.py
 └── README.md
+```
 
 ---
 
