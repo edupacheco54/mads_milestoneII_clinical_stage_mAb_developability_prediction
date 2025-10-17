@@ -15,17 +15,21 @@ from scripts.supervised_learning import (
     data_size_sensitivity,
 )
 
+from scripts.unsupervised_learning import run_unsupervised_analysis
+
 
 def main():
+    print("\nScanning for files...")
     directory = os.getcwd()
     data_files = scan_directory(directory, file_extension=".xlsx")
-    print("Files found:", data_files)
+    print("\nFiles found:", data_files)
 
+    print("\nprecprocessing files...")
     dfs = read_files(data_files)
-    print("Number of dataframes:", len(dfs))
+    print("\nNumber of dataframes:", len(dfs))
 
     merged_df = create_clean_df(dfs)
-    print("Merged dataframe shape:", merged_df.shape)
+    print("\nMerged dataframe shape:", merged_df.shape)
 
     model_ready_df = build_model_ready_from_merged(
         merged_df,
@@ -34,10 +38,13 @@ def main():
         include_esm=True,
         esm_model_name="esm2_t6_8M_UR50D",
     )
+    print("\nFiles processed succesfully ✅")
 
     # ==============================================
     # --------Supervised Learning Workflow----------
     # ==============================================
+
+    print("\nConducting supervised learning routine...")
 
     # 1. Extract X and y from the model_ready_df
     X, y = model_ready_df["X"], model_ready_df["y"]
@@ -102,6 +109,13 @@ def main():
     )
 
     print(svr_learning_curve)
+
+    # ==============================================
+    # --------Unsupervised Learning Workflow--------
+    # ==============================================
+    print("\nConducting unsupervised learning routine...")
+    unsup_results = run_unsupervised_analysis(merged_df, output_dir="results")
+    print(unsup_results)
 
 
 if __name__ == "__main__":

@@ -1,0 +1,3 @@
+Family,Scaler,Dimensionality,k,Silhouette,Model Selection
+KMeans,RobustScaler,fixed_n (n=2),3,0.7618484004660331,—
+GMM(full),RobustScaler,fixed_n (n=2),4,0.3786717426829631,BIC=1136.3
