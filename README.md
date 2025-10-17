@@ -13,7 +13,7 @@ The goal of this project is to analyze a dataset of therapeutic monoclonal antib
 The analysis is structured into three major components, integrated within a unified Python workflow (`main.py`):
 
 ### 1. **Data Engineering & Preprocessing**
-- Implemented via the scripts `load.py` and `preprocess.py`.
+- Implemented via the scripts `load.py` and `preprocess.py` (by **Eduardo Pacheco**).
 - Automatically scans the directory for Excel input files and merges them into a unified `DataFrame`.
 - Cleans and standardizes assay values, handles missing entries, and constructs model-ready datasets.
 - Integrates amino acid sequence features and optional **ESM-2 embeddings** for downstream analysis.
