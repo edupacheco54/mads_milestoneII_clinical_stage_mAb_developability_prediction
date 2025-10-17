@@ -48,9 +48,9 @@ The analysis is structured into three major components, integrated within a unif
 │   ├── supervised_learning.py
 │   └── unsupervised_learning.py
 ├── data/
+├── results/
 │   ├── supervised
 │   ├── unsupervised
-├── results/
 ├── main.py
 └── README.md
 ```
