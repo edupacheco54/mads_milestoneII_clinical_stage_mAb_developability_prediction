@@ -40,13 +40,12 @@ The analysis is structured into three major components, integrated within a unif
 ---
 
 ## 📂 Repository Structure
-│
+.
 ├── scripts/
 │   ├── load.py                     # File scanning and Excel import utilities
 │   ├── preprocess.py               # Data cleaning and model-ready dataset construction
 │   ├── supervised_learning.py      # Regression models for stability prediction
 │   └── unsupervised_learning.py    # Clustering and dimensionality reduction analysis
-│
 ├── data/                           # Raw input data (Excel files)
 ├── results/                        # Generated results (plots, CSVs)
 ├── main.py                         # Central execution script
@@ -81,11 +80,12 @@ The analysis is structured into three major components, integrated within a unif
 **1. Environment setup:**
 ```bash
 pip install -r requirements.txt
+```
 
 **2. Execute the workflow:**
 ```bash
 python main.py
-
+```
 
 ## 🧩 Future Work
 
