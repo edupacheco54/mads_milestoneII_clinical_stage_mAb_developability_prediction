@@ -17,6 +17,7 @@ import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
 import seaborn as sns
+import os
 
 from sklearn.model_selection import (
     train_test_split,
@@ -35,6 +36,17 @@ from sklearn.metrics import (
 from sklearn.inspection import permutation_importance
 from sklearn.base import clone
 
+from pathlib import Path
+
+
+def ensure_results_dir(save_dir="results", subfolder=None):
+    """Ensure the output directory exists (optionally with subfolder)."""
+    path = Path(save_dir)
+    if subfolder:
+        path = path / subfolder
+    path.mkdir(parents=True, exist_ok=True)
+    return path
+
 
 # ----------  plot functions for regression models  ----------
 def plot_pred_vs_obs(y_train, y_train_pred, y_test, y_test_pred, title):
@@ -50,7 +62,7 @@ def plot_pred_vs_obs(y_train, y_train_pred, y_test, y_test_pred, title):
     plt.ylabel("Predicted")
     plt.legend()
     plt.tight_layout()
-    plt.show()
+    # plt.show()
 
 
 def plot_residuals(y_train, y_train_pred, y_test, y_test_pred, title):
@@ -65,23 +77,23 @@ def plot_residuals(y_train, y_train_pred, y_test, y_test_pred, title):
     plt.title(f"{title} Residuals")
     plt.legend()
     plt.tight_layout()
-    plt.show()
+    # plt.show()
 
 
 # ----------  MODEL TRAIN / EVAL  ----------
 def train_and_eval(X, y, model_name):
+    """Train and evaluate regression models, saving outputs to /results."""
     X_train, X_test, y_train, y_test = train_test_split(
         X, y, test_size=0.2, random_state=41
     )
 
+    # === Model selection ===
     if model_name == "rf":
         model = GridSearchCV(
             RandomForestRegressor(random_state=42),
             param_grid={
                 "n_estimators": [10, 50, 200, 500],
                 "max_depth": [None, 5, 10, 20],
-                # "min_samples_split": [2, 5, 10],
-                # "min_samples_leaf": [1, 2, 5]
             },
             n_jobs=-1,
             scoring="neg_root_mean_squared_error",
@@ -109,7 +121,6 @@ def train_and_eval(X, y, model_name):
             scoring="neg_root_mean_squared_error",
         )
     elif model_name == "svr":
-        # RBF kernel with a small grid of C and gamma
         model = GridSearchCV(
             SVR(),
             param_grid={
@@ -124,6 +135,7 @@ def train_and_eval(X, y, model_name):
     else:
         raise ValueError("Choose model_name from: rf, gb, mlp, svr")
 
+    # === Fit model ===
     model.fit(X_train, y_train)
     print(f"\n=== {model_name.upper()} ===")
     print("Best Params:", model.best_params_)
@@ -141,8 +153,31 @@ def train_and_eval(X, y, model_name):
         f"Test  R²: {r2_score(y_test, y_test_pred):.3f}"
     )
 
+    # === Visualization & Saving ===
+    save_dir = ensure_results_dir(subfolder="supervised")
+
+    # Predicted vs Observed
     plot_pred_vs_obs(y_train, y_train_pred, y_test, y_test_pred, model_name.upper())
+    plt.savefig(
+        save_dir / f"{model_name}_pred_vs_obs.png", dpi=150, bbox_inches="tight"
+    )
+
+    # Residuals
     plot_residuals(y_train, y_train_pred, y_test, y_test_pred, model_name.upper())
+    plt.savefig(save_dir / f"{model_name}_residuals.png", dpi=150, bbox_inches="tight")
+
+    # === Save Metrics ===
+    metrics = {
+        "Model": [model_name],
+        "Best_Params": [model.best_params_],
+        "Train_RMSE": [root_mean_squared_error(y_train, y_train_pred)],
+        "Train_R2": [r2_score(y_train, y_train_pred)],
+        "Test_RMSE": [root_mean_squared_error(y_test, y_test_pred)],
+        "Test_R2": [r2_score(y_test, y_test_pred)],
+    }
+    pd.DataFrame(metrics).to_csv(save_dir / f"{model_name}_metrics.csv", index=False)
+
+    print(f"Results saved to: {save_dir.resolve()}")
 
     return model.best_estimator_
 
@@ -197,7 +232,18 @@ def plot_feature_importance(model, X, y, top_n=15):
     # Rotate X-axis labels for better visibility
     plt.xticks(rotation=45, ha="right")  # Rotate labels 45 degrees, align right
     plt.tight_layout()
-    plt.show()
+    # plt.show()
+
+    # === Save outputs ===
+    save_dir = ensure_results_dir(subfolder="supervised")
+    fi.to_csv(
+        save_dir / f"{model.__class__.__name__}_feature_importance.csv", index=False
+    )
+    plt.savefig(
+        save_dir / f"{model.__class__.__name__}_feature_importance.png",
+        dpi=150,
+        bbox_inches="tight",
+    )
 
     return fi_top
 
@@ -261,7 +307,12 @@ def ablation_analysis(
     plt.title("Ablation Analysis (Feature Importance)")
     plt.grid(True)
     plt.tight_layout()
-    plt.show()
+    # plt.show()
+
+    # === Save outputs ===
+    save_dir = ensure_results_dir(subfolder="supervised")
+    df_results.to_csv(save_dir / "ablation_analysis.csv", index=False)
+    plt.savefig(save_dir / "ablation_analysis.png", dpi=150, bbox_inches="tight")
 
     return df_results
 
@@ -369,7 +420,12 @@ def sensitivity_analysis(
         fig.colorbar(surf, ax=ax3d, shrink=0.5, aspect=10, pad=0.2, label="Mean RMSE")
 
     plt.tight_layout()
-    plt.show()
+    # plt.show()
+
+    # === Save outputs ===
+    save_dir = ensure_results_dir(subfolder="supervised")
+    results_df.to_csv(save_dir / "sensitivity_analysis.csv", index=False)
+    plt.savefig(save_dir / "sensitivity_analysis.png", dpi=150, bbox_inches="tight")
 
     return results_df
 
@@ -473,6 +529,11 @@ def data_size_sensitivity(
     ax.legend()
     ax.grid(True)
     plt.tight_layout()
-    plt.show()
+    # plt.show()
+
+    # === Save outputs ===
+    save_dir = ensure_results_dir(subfolder="supervised")
+    results_df.to_csv(save_dir / "data_size_sensitivity.csv", index=False)
+    plt.savefig(save_dir / "data_size_sensitivity.png", dpi=150, bbox_inches="tight")
 
     return results_df

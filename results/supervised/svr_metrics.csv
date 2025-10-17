@@ -1,0 +1,2 @@
+Model,Best_Params,Train_RMSE,Train_R2,Test_RMSE,Test_R2
+svr,"{'C': 0.1, 'epsilon': 0.01, 'gamma': 'scale', 'kernel': 'rbf'}",0.03095380733940221,0.6803633907423521,0.05284489945748021,0.000674783757297126

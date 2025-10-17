@@ -10,9 +10,10 @@ from scripts.supervised_learning import (
     train_and_eval,
     get_feature_importance,
     plot_feature_importance,
-    sensitivity_analysis,
     ablation_analysis,
+    sensitivity_analysis,
     data_size_sensitivity,
+    ensure_results_dir,
 )
 
 from scripts.unsupervised_learning import run_unsupervised_analysis
@@ -109,6 +110,7 @@ def main():
     )
 
     print(svr_learning_curve)
+    save_dir = ensure_results_dir(subfolder="supervised")
 
     # ==============================================
     # --------Unsupervised Learning Workflow--------

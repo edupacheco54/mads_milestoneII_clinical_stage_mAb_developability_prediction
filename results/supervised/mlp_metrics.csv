@@ -1,0 +1,2 @@
+Model,Best_Params,Train_RMSE,Train_R2,Test_RMSE,Test_R2
+mlp,"{'alpha': 0.1, 'hidden_layer_sizes': (256, 128), 'learning_rate_init': 0.01}",0.07680967162393844,-0.9681590045581729,0.08915999476225414,-1.8447281012836019

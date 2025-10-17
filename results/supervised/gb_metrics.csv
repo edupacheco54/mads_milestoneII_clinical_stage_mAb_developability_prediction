@@ -1,0 +1,2 @@
+Model,Best_Params,Train_RMSE,Train_R2,Test_RMSE,Test_R2
+gb,"{'learning_rate': 0.01, 'max_depth': 3, 'n_estimators': 100}",0.03448717235362259,0.6032256949837778,0.054557217819160474,-0.06513614972645598

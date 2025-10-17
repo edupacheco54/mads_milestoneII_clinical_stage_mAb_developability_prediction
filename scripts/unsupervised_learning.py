@@ -77,6 +77,7 @@ def run_unsupervised_analysis(merged_df, output_dir="."):
     """
 
     # --- Ensure output directory exists ---
+    output_dir = os.path.join("results", "unsupervised")
     os.makedirs(output_dir, exist_ok=True)
 
     df = merged_df.copy()

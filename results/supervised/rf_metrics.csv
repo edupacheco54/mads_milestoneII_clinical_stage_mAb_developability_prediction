@@ -1,0 +1,2 @@
+Model,Best_Params,Train_RMSE,Train_R2,Test_RMSE,Test_R2
+rf,"{'max_depth': 5, 'n_estimators': 200}",0.0266601789371142,0.7628874808569712,0.05634960310877363,-0.1362722940205643
